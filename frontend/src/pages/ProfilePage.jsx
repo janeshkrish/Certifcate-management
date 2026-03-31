@@ -1,21 +1,38 @@
-import { ArrowRight, LayoutDashboard, LogIn, Search, Sparkles } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, Globe, Layers3, LayoutDashboard, LogIn, Search } from "lucide-react";
 import { startTransition, useDeferredValue, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { fetchProfile, getApiErrorMessage } from "../api/client";
 import CertificateCard from "../components/CertificateCard";
-import DomainSidebar from "../components/DomainSidebar";
+import CertificateModal from "../components/CertificateModal";
+import DomainCard from "../components/DomainCard";
+import Layout from "../components/Layout";
 import LoadingState from "../components/LoadingState";
-import StatCard from "../components/StatCard";
+import StatsCard from "../components/StatsCard";
 import { useAuth } from "../context/AuthContext";
+
+const gridVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.06, delayChildren: 0.08 }
+  }
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0 }
+};
 
 export default function ProfilePage() {
   const { isAuthenticated } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedDomain, setSelectedDomain] = useState("all");
+  const [selectedDomainSlug, setSelectedDomainSlug] = useState(null);
   const [search, setSearch] = useState("");
+  const [selectedCertificate, setSelectedCertificate] = useState(null);
   const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
@@ -59,16 +76,17 @@ export default function ProfilePage() {
   if (error) {
     return (
       <main className="page-shell flex items-center justify-center">
-        <div className="neo-card max-w-xl p-10 text-center">
+        <div className="neo-panel max-w-xl p-10 text-center">
           <p className="text-xl font-extrabold text-rose-700">{error}</p>
         </div>
       </main>
     );
   }
 
+  const selectedDomain = profile?.domains.find((domain) => domain.slug === selectedDomainSlug) || null;
   const certificates = (profile?.certificates || []).filter((certificate) => {
     const searchTerm = deferredSearch.trim().toLowerCase();
-    const matchesDomain = selectedDomain === "all" || certificate.domain.slug === selectedDomain;
+    const matchesDomain = selectedDomain ? certificate.domain.slug === selectedDomain.slug : false;
     const matchesSearch =
       !searchTerm ||
       certificate.title.toLowerCase().includes(searchTerm) ||
@@ -79,88 +97,141 @@ export default function ProfilePage() {
   });
 
   return (
-    <main className="page-shell space-y-8">
-      <section className="neo-card mesh-overlay p-8 sm:p-10">
-        <div className="flex flex-col gap-8 xl:flex-row xl:items-start xl:justify-between">
-          <div className="max-w-3xl">
-            <span className="soft-badge">
-              <Sparkles size={14} />
-              Public Profile
-            </span>
-            <h1 className="section-title mt-6 text-4xl leading-tight sm:text-6xl">
-              {profile.owner_name}
-            </h1>
-            <p className="mt-3 text-xl font-semibold text-accent">{profile.headline}</p>
-            <p className="mt-5 max-w-2xl text-base leading-8 text-muted sm:text-lg">
-              {profile.bio}
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                className="neo-button neo-button-primary inline-flex items-center gap-2"
-                to={isAuthenticated ? "/dashboard" : "/login"}
-              >
-                {isAuthenticated ? <LayoutDashboard size={16} /> : <LogIn size={16} />}
-                {isAuthenticated ? "Open Dashboard" : "Admin Login"}
-              </Link>
-              <a className="neo-button inline-flex items-center gap-2" href="#certificates">
-                Browse Certificates
-                <ArrowRight size={16} />
-              </a>
-            </div>
-          </div>
-
-          <div className="grid w-full gap-4 sm:grid-cols-3 xl:max-w-xl">
-            <StatCard label="Public Certificates" value={profile.stats.public_certificates} accent="text-accent" />
-            <StatCard label="Domains" value={profile.stats.domains} />
-            <StatCard label="Verified Items" value={profile.stats.total_certificates} />
-          </div>
+    <Layout
+      actions={
+        <Link
+          className="neo-button neo-button-primary"
+          to={isAuthenticated ? "/dashboard" : "/login"}
+        >
+          {isAuthenticated ? <LayoutDashboard size={16} /> : <LogIn size={16} />}
+          {isAuthenticated ? "Dashboard" : "Admin Login"}
+        </Link>
+      }
+      eyebrow="Public portfolio"
+      subtitle={
+        <div className="max-w-2xl space-y-2">
+          <p className="text-base font-semibold text-accent sm:text-lg">{profile.headline}</p>
+          <p className="text-sm leading-7 text-muted sm:text-base">{profile.bio}</p>
         </div>
-      </section>
+      }
+      title={profile.owner_name}
+    >
+      <div className="space-y-6" id="certificates">
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <StatsCard icon={Globe} label="Published" value={profile.stats.public_certificates} />
+          <StatsCard icon={Layers3} label="Domains" value={profile.stats.domains} />
+          <StatsCard icon={LayoutDashboard} label="Verified" value={profile.stats.total_certificates} />
+        </section>
 
-      <section className="panel-grid" id="certificates">
-        <DomainSidebar
-          domainCountLabel="Certification Domains"
-          domains={profile.domains}
-          selectedDomain={selectedDomain}
-          onSelectDomain={(value) => startTransition(() => setSelectedDomain(value))}
-        />
-
-        <div className="space-y-6">
-          <div className="neo-card flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="muted text-xs font-semibold uppercase tracking-[0.18em]">Certificate Directory</p>
-              <h2 className="section-title mt-2 text-3xl">Public Credentials</h2>
-            </div>
-
-            <div className="neo-inset flex items-center gap-3 px-4 py-3 sm:min-w-[320px]">
-              <Search size={18} className="text-accent" />
-              <input
-                className="w-full bg-transparent outline-none"
-                placeholder="Search title, issuer, or certificate ID"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </div>
+        <section className="space-y-4">
+          <div>
+            <span className="neo-chip neo-chip-muted">Step 1</span>
+            <h2 className="section-title mt-3 text-2xl">Browse by domain</h2>
+            <p className="mt-2 text-sm text-muted">Open a domain to reveal its certificates.</p>
           </div>
 
-          {certificates.length ? (
-            <div className="grid gap-6 xl:grid-cols-2">
-              {certificates.map((certificate) => (
-                <CertificateCard key={certificate.id} certificate={certificate} />
-              ))}
-            </div>
+          <motion.div
+            animate="visible"
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+            initial="hidden"
+            variants={gridVariants}
+          >
+            {profile.domains.map((domain) => (
+              <motion.div key={domain.id} variants={cardVariants}>
+                <DomainCard
+                  active={selectedDomainSlug === domain.slug}
+                  domain={domain}
+                  onClick={() => startTransition(() => setSelectedDomainSlug(domain.slug))}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        </section>
+
+        <AnimatePresence mode="wait">
+          {selectedDomain ? (
+            <motion.section
+              key={selectedDomain.id}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-4"
+              exit={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 18 }}
+            >
+              <div className="neo-panel p-5 sm:p-6">
+                <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                  <div>
+                    <button
+                      className="text-sm font-semibold text-accent"
+                      onClick={() => startTransition(() => setSelectedDomainSlug(null))}
+                      type="button"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <ArrowLeft size={16} />
+                        Back to domains
+                      </span>
+                    </button>
+                    <h2 className="section-title mt-3 text-2xl sm:text-3xl">{selectedDomain.name}</h2>
+                    <p className="mt-2 text-sm text-muted">
+                      {certificates.length} certificate{certificates.length === 1 ? "" : "s"} available
+                    </p>
+                  </div>
+
+                  <div className="neo-inset flex items-center gap-3 px-4 py-3 sm:min-w-[280px]">
+                    <Search size={18} className="text-accent" />
+                    <input
+                      className="w-full bg-transparent outline-none"
+                      placeholder="Search title, issuer, or ID"
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {certificates.length ? (
+                <motion.div
+                  animate="visible"
+                  className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+                  initial="hidden"
+                  variants={gridVariants}
+                >
+                  {certificates.map((certificate) => (
+                    <motion.div key={certificate.id} variants={cardVariants}>
+                      <CertificateCard certificate={certificate} onClick={setSelectedCertificate} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              ) : (
+                <div className="neo-panel p-8 text-center sm:p-10">
+                  <h3 className="section-title text-xl sm:text-2xl">No certificates here yet</h3>
+                  <p className="mt-3 text-sm leading-7 text-muted sm:text-base">
+                    Try another domain or adjust the search query.
+                  </p>
+                </div>
+              )}
+            </motion.section>
           ) : (
-            <div className="neo-card p-10 text-center">
-              <h3 className="section-title text-2xl">No certificates found</h3>
-              <p className="mt-3 text-muted">
-                Try another domain or search term. Only public certificates appear here.
+            <motion.section
+              key="profile-empty"
+              animate={{ opacity: 1, y: 0 }}
+              className="neo-panel p-8 text-center sm:p-10"
+              exit={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 18 }}
+            >
+              <h3 className="section-title text-xl sm:text-2xl">Step 2 opens after domain selection</h3>
+              <p className="mt-3 text-sm leading-7 text-muted sm:text-base">
+                Pick a domain above to see the matching certificates, then tap any card for details.
               </p>
-            </div>
+            </motion.section>
           )}
-        </div>
-      </section>
-    </main>
+        </AnimatePresence>
+      </div>
+
+      <CertificateModal
+        certificate={selectedCertificate}
+        isOpen={Boolean(selectedCertificate)}
+        onClose={() => setSelectedCertificate(null)}
+      />
+    </Layout>
   );
 }
-

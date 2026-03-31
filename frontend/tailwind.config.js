@@ -4,23 +4,30 @@ export default {
   theme: {
     extend: {
       colors: {
-        shell: "#e0e0e0",
-        ink: "#213045",
-        muted: "#62718d",
-        accent: "#1f6feb",
-        accentSoft: "#dbe9ff",
-        successSoft: "#d6f5e4",
-        dangerSoft: "#f7d7d7"
+        surface: "#e6e7ee",
+        ink: "#1f2937",
+        muted: "#6b7280",
+        accent: "#2563eb",
+        shadowDark: "#c5c6cc",
+        shadowLight: "#ffffff",
+        successSoft: "#d8f3e5",
+        dangerSoft: "#f8dcdf",
+        accentSoft: "#dbe8ff"
       },
       borderRadius: {
-        panel: "20px"
+        panel: "20px",
+        soft: "16px"
       },
       fontFamily: {
-        sans: ["Manrope", "sans-serif"],
-        display: ["Space Grotesk", "sans-serif"]
+        sans: ["Inter", "sans-serif"],
+        display: ["Poppins", "sans-serif"]
+      },
+      boxShadow: {
+        neo: "14px 14px 28px #c5c6cc, -14px -14px 28px #ffffff",
+        neoSoft: "10px 10px 22px rgba(197, 198, 204, 0.9), -10px -10px 22px rgba(255, 255, 255, 0.95)",
+        neoInset: "inset 8px 8px 16px #c5c6cc, inset -8px -8px 16px #ffffff"
       }
     }
   },
   plugins: []
 };
-

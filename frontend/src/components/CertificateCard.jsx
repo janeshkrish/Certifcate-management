@@ -1,89 +1,76 @@
-import { CalendarDays, ExternalLink, FileText, Pencil, QrCode, ShieldCheck, Trash2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { CalendarDays, ChevronRight, Pencil, Trash2 } from "lucide-react";
 
-import { formatDate, toTitleCase, truncateHash } from "../utils/format";
+import { formatDate, toTitleCase } from "../utils/format";
 
-export default function CertificateCard({ certificate, isAdmin = false, onEdit, onDelete }) {
+export default function CertificateCard({
+  certificate,
+  isAdmin = false,
+  onClick,
+  onEdit,
+  onDelete
+}) {
+  function handleKeyDown(event) {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick?.(certificate);
+    }
+  }
+
   return (
-    <article className="neo-card group flex h-full flex-col p-6">
-      <div className="flex items-start justify-between gap-4">
+    <motion.article
+      aria-label={`Open ${certificate.title}`}
+      className="neo-panel-soft flex h-full cursor-pointer flex-col gap-4 p-4 sm:p-5"
+      role="button"
+      tabIndex={0}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.985 }}
+      onClick={() => onClick?.(certificate)}
+      onKeyDown={handleKeyDown}
+    >
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <span className="soft-badge">{certificate.domain.name}</span>
-          <h3 className="section-title mt-4 text-2xl leading-tight">{certificate.title}</h3>
+          <span className="neo-chip neo-chip-accent">{certificate.domain.name}</span>
+          <h3 className="section-title mt-4 text-lg leading-snug sm:text-xl">{certificate.title}</h3>
           <p className="mt-2 text-sm text-muted">{certificate.issuer}</p>
         </div>
 
-        <div className="rounded-[18px] bg-shell p-3 shadow-[inset_6px_6px_14px_#bcbcbc,inset_-6px_-6px_14px_#ffffff]">
-          <img
-            alt={`QR for ${certificate.title}`}
-            className="h-20 w-20 rounded-xl object-cover"
-            src={certificate.qr_code_data_url}
-          />
+        <span className={`neo-chip ${certificate.visibility === "public" ? "neo-chip-accent" : "neo-chip-muted"}`}>
+          {toTitleCase(certificate.visibility)}
+        </span>
+      </div>
+
+      <div className="neo-inset flex items-center justify-between gap-3 px-4 py-3 text-sm text-ink/75">
+        <div className="flex items-center gap-2">
+          <CalendarDays size={16} className="text-accent" />
+          <span>{formatDate(certificate.issue_date)}</span>
         </div>
+        <span className="font-semibold text-accent">Open</span>
       </div>
 
-      <p className="mt-5 text-sm leading-7 text-muted">{certificate.description}</p>
-
-      <div className="mt-6 grid gap-3 text-sm text-ink">
-        <div className="neo-inset flex items-center gap-3 px-4 py-3">
-          <ShieldCheck size={16} className="text-accent" />
-          <span className="font-semibold">{certificate.certificate_number}</span>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="neo-inset flex items-center gap-3 px-4 py-3">
-            <CalendarDays size={16} className="text-accent" />
-            <span>{formatDate(certificate.issue_date)}</span>
-          </div>
-          <div className="neo-inset flex items-center gap-3 px-4 py-3">
-            <QrCode size={16} className="text-accent" />
-            <span>{toTitleCase(certificate.visibility)}</span>
-          </div>
-        </div>
+      <div className="flex items-center justify-between gap-4 text-sm text-muted">
+        <span className="truncate">{certificate.certificate_number}</span>
+        <ChevronRight size={18} className="text-accent" />
       </div>
 
-      <div className="mt-6 rounded-[18px] bg-white/35 p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">SHA-256</p>
-        <p className="mt-2 break-all text-sm font-semibold text-ink">{truncateHash(certificate.data_hash)}</p>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <a
-          className="neo-button flex items-center gap-2"
-          href={certificate.file_url}
-          rel="noreferrer"
-          target="_blank"
-        >
-          <FileText size={16} />
-          View File
-        </a>
-        <a
-          className="neo-button flex items-center gap-2"
-          href={certificate.verification_link}
-          rel="noreferrer"
-          target="_blank"
-        >
-          <ExternalLink size={16} />
-          Verify
-        </a>
-      </div>
-
-      {isAdmin ? (
-        <div className="mt-6 flex gap-3 border-t border-white/20 pt-6">
-          <button className="neo-button flex items-center gap-2" onClick={() => onEdit?.(certificate)} type="button">
+      {isAdmin && (onEdit || onDelete) ? (
+        <div className="flex gap-2 pt-1" onClick={(event) => event.stopPropagation()}>
+          <button
+            className="neo-icon-button"
+            onClick={() => onEdit?.(certificate)}
+            type="button"
+          >
             <Pencil size={16} />
-            Edit
           </button>
           <button
-            className="neo-button flex items-center gap-2 text-rose-700"
+            className="neo-icon-button text-rose-600"
             onClick={() => onDelete?.(certificate)}
             type="button"
           >
             <Trash2 size={16} />
-            Delete
           </button>
         </div>
       ) : null}
-    </article>
+    </motion.article>
   );
 }
-

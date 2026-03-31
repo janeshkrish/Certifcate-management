@@ -18,5 +18,8 @@ export function truncateHash(hash) {
 }
 
 export function toTitleCase(value) {
+  if (!value) {
+    return "";
+  }
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
