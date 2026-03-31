@@ -26,7 +26,7 @@ def serialize_certificate(document: dict) -> dict:
         "issue_date": issue_date,
         "file_url": document["file_url"],
         "file_public_id": document.get("file_public_id"),
-        "verification_link": document["verification_link"],
+        "verification_link": document.get("verification_link"),
         "description": document["description"],
         "visibility": document["visibility"],
         "data_hash": document["data_hash"],
@@ -34,4 +34,3 @@ def serialize_certificate(document: dict) -> dict:
         "created_at": document["created_at"],
         "updated_at": document["updated_at"],
     }
-

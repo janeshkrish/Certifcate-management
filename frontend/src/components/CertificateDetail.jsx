@@ -1,7 +1,7 @@
 import { ArrowLeft, CalendarDays, ExternalLink, FileText, QrCode, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { formatDate, toTitleCase } from "../utils/format";
+import { formatDate, openExternalUrl, toTitleCase } from "../utils/format";
 
 export default function CertificateDetail({ certificate, domainHref }) {
   return (
@@ -69,24 +69,24 @@ export default function CertificateDetail({ certificate, domainHref }) {
           </div>
 
           <div className="grid gap-3">
-            <a
+            <button
               className="neo-button neo-button-primary flex items-center justify-center gap-2"
-              href={certificate.file_url}
-              rel="noreferrer"
-              target="_blank"
+              onClick={() => openExternalUrl(certificate.file_url)}
+              type="button"
             >
               <FileText size={16} />
               View File
-            </a>
-            <a
-              className="neo-button flex items-center justify-center gap-2"
-              href={certificate.verification_link}
-              rel="noreferrer"
-              target="_blank"
-            >
-              <ExternalLink size={16} />
-              Verify
-            </a>
+            </button>
+            {certificate.verification_link ? (
+              <button
+                className="neo-button flex items-center justify-center gap-2"
+                onClick={() => openExternalUrl(certificate.verification_link)}
+                type="button"
+              >
+                <ExternalLink size={16} />
+                Verify
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

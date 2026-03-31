@@ -6,7 +6,7 @@
 
 :root {
   --surface: #e6e7ee;
-  --surface-soft: rgba(230, 231, 238, 0.94);
+  --surface-soft: #eef0f5;
   --surface-strong: #eef0f5;
   --light-shadow: #ffffff;
   --dark-shadow: #c5c6cc;
@@ -29,12 +29,12 @@
 
 html[data-theme="dark"] {
   --surface: #1e1f25;
-  --surface-soft: rgba(30, 31, 37, 0.96);
-  --surface-strong: #25262d;
+  --surface-soft: #23242b;
+  --surface-strong: #23242b;
   --light-shadow: #2a2b32;
   --dark-shadow: #14151a;
-  --text-main: #e5e7eb;
-  --text-muted: #a7adb8;
+  --text-main: #f3f4f6;
+  --text-muted: #9ca3af;
   --accent: #60a5fa;
   --accent-soft: rgba(96, 165, 250, 0.16);
   --danger-soft: rgba(127, 29, 29, 0.3);
@@ -142,7 +142,7 @@ textarea {
 
 .neo-panel-soft {
   border-radius: 20px;
-  background: color-mix(in srgb, var(--surface-soft) 84%, transparent);
+  background: var(--surface-soft);
   box-shadow:
     12px 12px 26px var(--dark-shadow),
     -12px -12px 26px var(--light-shadow);
@@ -255,6 +255,13 @@ textarea {
     0 0 0 3px var(--accent-soft);
 }
 
+.neo-input-error {
+  box-shadow:
+    inset 8px 8px 16px var(--dark-shadow),
+    inset -8px -8px 16px var(--light-shadow),
+    0 0 0 2px rgba(239, 68, 68, 0.45);
+}
+
 .neo-chip {
   display: inline-flex;
   align-items: center;
@@ -285,6 +292,32 @@ textarea {
 
 .muted {
   color: var(--text-muted);
+}
+
+.error-text {
+  color: #ef4444;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.text-ink,
+.text-gray-100,
+.text-gray-800 {
+  color: var(--text-main) !important;
+}
+
+.text-muted,
+.text-gray-400,
+.text-gray-600 {
+  color: var(--text-muted) !important;
+}
+
+.text-accent {
+  color: var(--accent) !important;
+}
+
+.bg-dangerSoft {
+  background: var(--danger-soft) !important;
 }
 
 .scroll-soft::-webkit-scrollbar {

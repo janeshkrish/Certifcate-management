@@ -23,3 +23,11 @@ export function toTitleCase(value) {
   }
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+
+export function openExternalUrl(url) {
+  if (!url || typeof window === "undefined") {
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+}

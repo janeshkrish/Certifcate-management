@@ -20,7 +20,7 @@ class CertificateCreatePayload(BaseModel):
     domain_id: str = Field(..., min_length=1)
     issuer: str = Field(..., min_length=2, max_length=120)
     issue_date: date
-    verification_link: HttpUrl
+    verification_link: HttpUrl | None = None
     description: str = Field(..., min_length=10, max_length=2000)
     visibility: VisibilityEnum = VisibilityEnum.public
 
@@ -46,11 +46,10 @@ class CertificateResponse(BaseModel):
     issue_date: date | None
     file_url: str
     file_public_id: str | None = None
-    verification_link: str
+    verification_link: str | None = None
     description: str
     visibility: VisibilityEnum
     data_hash: str
     qr_code_data_url: str
     created_at: datetime
     updated_at: datetime
-

@@ -43,6 +43,8 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [domainName, setDomainName] = useState("");
+  const [domainError, setDomainError] = useState("");
+  const [domainSubmitting, setDomainSubmitting] = useState(false);
   const [selectedDomainSlug, setSelectedDomainSlug] = useState(null);
   const [modalState, setModalState] = useState({ open: false, mode: "detail", certificate: null });
   const [submitting, setSubmitting] = useState(false);
@@ -77,6 +79,7 @@ export default function DashboardPage() {
 
   async function handleAddDomain(name) {
     try {
+      setDomainSubmitting(true);
       setError("");
       const createdDomain = await createDomain({ name });
       await loadDashboard();
@@ -90,6 +93,8 @@ export default function DashboardPage() {
       }
       setError(getApiErrorMessage(requestError, "Failed to create domain."));
       return false;
+    } finally {
+      setDomainSubmitting(false);
     }
   }
 
@@ -120,9 +125,16 @@ export default function DashboardPage() {
     event.preventDefault();
     const trimmed = domainName.trim();
     if (!trimmed) {
+      setDomainError("Domain name is required.");
       return;
     }
 
+    if (trimmed.length < 2) {
+      setDomainError("Domain name must be at least 2 characters.");
+      return;
+    }
+
+    setDomainError("");
     const reset = await handleAddDomain(trimmed);
     if (reset) {
       setDomainName("");
@@ -254,16 +266,27 @@ export default function DashboardPage() {
         <section className="space-y-4">
           <form className="grid gap-3 sm:grid-cols-[minmax(0,240px)_auto]" onSubmit={handleCreateDomain}>
             <input
-              className="neo-input"
+              className={`neo-input ${domainError ? "neo-input-error" : ""}`.trim()}
               placeholder="New domain"
               value={domainName}
-              onChange={(event) => setDomainName(event.target.value)}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                setDomainName(nextValue);
+                if (domainError && nextValue.trim().length >= 2) {
+                  setDomainError("");
+                }
+              }}
             />
-            <button className="neo-button neo-button-primary" type="submit">
+            <button
+              className="neo-button neo-button-primary"
+              disabled={!domainName.trim() || domainSubmitting}
+              type="submit"
+            >
               <Plus size={16} />
-              Add Domain
+              {domainSubmitting ? "Adding..." : "Add Domain"}
             </button>
           </form>
+          {domainError ? <p className="error-text">{domainError}</p> : null}
 
           {domains.length ? (
             <motion.div
@@ -370,6 +393,7 @@ export default function DashboardPage() {
         isAdmin
         isOpen={modalState.open}
         mode={modalState.mode}
+        requestError={error}
         submitting={submitting}
         onClose={closeModal}
         onDeleteRequest={handleDeleteCertificate}

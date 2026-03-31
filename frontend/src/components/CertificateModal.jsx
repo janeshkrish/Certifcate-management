@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { formatDate, toTitleCase } from "../utils/format";
+import { formatDate, openExternalUrl, toTitleCase } from "../utils/format";
 
 export default function CertificateModal({
   isOpen,
@@ -21,6 +21,7 @@ export default function CertificateModal({
   initialDomainId = "",
   isAdmin = false,
   submitting = false,
+  requestError = "",
   onClose,
   onDeleteRequest,
   onEditRequest,
@@ -36,6 +37,7 @@ export default function CertificateModal({
     visibility: "public",
     file: null
   });
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!isOpen || typeof document === "undefined") {
@@ -69,11 +71,12 @@ export default function CertificateModal({
         domain_id: certificate.domain.id,
         issuer: certificate.issuer,
         issue_date: certificate.issue_date,
-        verification_link: certificate.verification_link,
+        verification_link: certificate.verification_link || "",
         description: certificate.description,
         visibility: certificate.visibility,
         file: null
       });
+      setErrors({});
       return;
     }
 
@@ -87,19 +90,90 @@ export default function CertificateModal({
       visibility: "public",
       file: null
     });
+    setErrors({});
   }, [certificate, domains, initialDomainId, isOpen, mode]);
 
   const isFormMode = mode === "create" || mode === "edit";
 
+  function validateForm(nextForm) {
+    const validationErrors = {};
+
+    if (!nextForm.title.trim()) {
+      validationErrors.title = "Title is required.";
+    } else if (nextForm.title.trim().length < 3) {
+      validationErrors.title = "Title must be at least 3 characters.";
+    }
+
+    if (!nextForm.domain_id) {
+      validationErrors.domain_id = "Select a domain.";
+    }
+
+    if (!nextForm.issuer.trim()) {
+      validationErrors.issuer = "Issuer is required.";
+    } else if (nextForm.issuer.trim().length < 2) {
+      validationErrors.issuer = "Issuer must be at least 2 characters.";
+    }
+
+    if (!nextForm.issue_date) {
+      validationErrors.issue_date = "Issue date is required.";
+    }
+
+    if (!nextForm.description.trim()) {
+      validationErrors.description = "Description is required.";
+    } else if (nextForm.description.trim().length < 10) {
+      validationErrors.description = "Description must be at least 10 characters.";
+    }
+
+    if (nextForm.verification_link.trim()) {
+      try {
+        new URL(nextForm.verification_link);
+      } catch {
+        validationErrors.verification_link = "Enter a valid URL.";
+      }
+    }
+
+    if (mode === "create" && !nextForm.file) {
+      validationErrors.file = "Certificate file is required.";
+    }
+
+    return validationErrors;
+  }
+
   function updateField(name, value) {
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => {
+      const nextForm = { ...current, [name]: value };
+      if (errors[name]) {
+        setErrors((currentErrors) => {
+          const nextErrors = { ...currentErrors };
+          const validationErrors = validateForm(nextForm);
+          if (validationErrors[name]) {
+            nextErrors[name] = validationErrors[name];
+          } else {
+            delete nextErrors[name];
+          }
+          return nextErrors;
+        });
+      }
+      return nextForm;
+    });
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
+    const validationErrors = validateForm(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
     const payload = new FormData();
 
     Object.entries(form).forEach(([key, value]) => {
+      if (key === "verification_link") {
+        payload.append(key, String(value || ""));
+        return;
+      }
+
       if (value !== null && value !== "") {
         payload.append(key, value);
       }
@@ -107,6 +181,12 @@ export default function CertificateModal({
 
     await onSubmit(payload);
   }
+
+  function getFieldClass(baseClassName, fieldName) {
+    return `${baseClassName} ${errors[fieldName] ? "neo-input-error" : ""}`.trim();
+  }
+
+  const submitDisabled = submitting || Object.keys(validateForm(form)).length > 0;
 
   return (
     <AnimatePresence>
@@ -164,21 +244,28 @@ export default function CertificateModal({
 
             {isFormMode ? (
               <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+                {requestError ? (
+                  <div className="rounded-[18px] bg-dangerSoft px-4 py-3 text-sm font-semibold text-rose-600">
+                    {requestError}
+                  </div>
+                ) : null}
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2">
                     <span className="text-sm font-semibold text-muted">Title</span>
                     <input
-                      className="neo-input"
+                      className={getFieldClass("neo-input", "title")}
                       required
                       value={form.title}
                       onChange={(event) => updateField("title", event.target.value)}
                     />
+                    {errors.title ? <p className="error-text">{errors.title}</p> : null}
                   </label>
 
                   <label className="space-y-2">
                     <span className="text-sm font-semibold text-muted">Domain</span>
                     <select
-                      className="neo-select"
+                      className={getFieldClass("neo-select", "domain_id")}
                       required
                       value={form.domain_id}
                       onChange={(event) => updateField("domain_id", event.target.value)}
@@ -192,48 +279,52 @@ export default function CertificateModal({
                         </option>
                       ))}
                     </select>
+                    {errors.domain_id ? <p className="error-text">{errors.domain_id}</p> : null}
                   </label>
 
                   <label className="space-y-2">
                     <span className="text-sm font-semibold text-muted">Issuer</span>
                     <input
-                      className="neo-input"
+                      className={getFieldClass("neo-input", "issuer")}
                       required
                       value={form.issuer}
                       onChange={(event) => updateField("issuer", event.target.value)}
                     />
+                    {errors.issuer ? <p className="error-text">{errors.issuer}</p> : null}
                   </label>
 
                   <label className="space-y-2">
                     <span className="text-sm font-semibold text-muted">Issue Date</span>
                     <input
-                      className="neo-input"
+                      className={getFieldClass("neo-input", "issue_date")}
                       required
                       type="date"
                       value={form.issue_date}
                       onChange={(event) => updateField("issue_date", event.target.value)}
                     />
+                    {errors.issue_date ? <p className="error-text">{errors.issue_date}</p> : null}
                   </label>
 
                   <label className="space-y-2 md:col-span-2">
-                    <span className="text-sm font-semibold text-muted">Verification Link</span>
+                    <span className="text-sm font-semibold text-muted">Verification Link (Optional)</span>
                     <input
-                      className="neo-input"
-                      required
+                      className={getFieldClass("neo-input", "verification_link")}
                       type="url"
                       value={form.verification_link}
                       onChange={(event) => updateField("verification_link", event.target.value)}
                     />
+                    {errors.verification_link ? <p className="error-text">{errors.verification_link}</p> : null}
                   </label>
 
                   <label className="space-y-2 md:col-span-2">
                     <span className="text-sm font-semibold text-muted">Description</span>
                     <textarea
-                      className="neo-textarea min-h-32"
+                      className={getFieldClass("neo-textarea min-h-32", "description")}
                       required
                       value={form.description}
                       onChange={(event) => updateField("description", event.target.value)}
                     />
+                    {errors.description ? <p className="error-text">{errors.description}</p> : null}
                   </label>
 
                   <label className="space-y-2">
@@ -254,19 +345,23 @@ export default function CertificateModal({
                     </span>
                     <input
                       accept=".pdf,image/png,image/jpeg,image/jpg,image/webp"
-                      className="neo-input cursor-pointer file:mr-4 file:rounded-2xl file:border-0 file:bg-accent file:px-4 file:py-2 file:font-semibold file:text-white"
+                      className={getFieldClass(
+                        "neo-input cursor-pointer file:mr-4 file:rounded-2xl file:border-0 file:bg-accent file:px-4 file:py-2 file:font-semibold file:text-white",
+                        "file"
+                      )}
                       required={mode === "create"}
                       type="file"
                       onChange={(event) => updateField("file", event.target.files?.[0] || null)}
                     />
+                    {errors.file ? <p className="error-text">{errors.file}</p> : null}
                   </label>
                 </div>
 
                 <div className="flex flex-wrap justify-end gap-3 pt-2">
-                  <button className="neo-button" onClick={onClose} type="button">
+                  <button className="neo-button" disabled={submitting} onClick={onClose} type="button">
                     Cancel
                   </button>
-                  <button className="neo-button neo-button-primary" disabled={submitting} type="submit">
+                  <button className="neo-button neo-button-primary" disabled={submitDisabled} type="submit">
                     {submitting ? "Saving..." : mode === "create" ? "Create Certificate" : "Save Changes"}
                   </button>
                 </div>
@@ -318,24 +413,24 @@ export default function CertificateModal({
                   </div>
 
                   <div className="grid gap-3">
-                    <a
+                    <button
                       className="neo-button neo-button-primary flex items-center justify-center gap-2"
-                      href={certificate.file_url}
-                      rel="noreferrer"
-                      target="_blank"
+                      onClick={() => openExternalUrl(certificate.file_url)}
+                      type="button"
                     >
                       <FileText size={16} />
                       View File
-                    </a>
-                    <a
-                      className="neo-button flex items-center justify-center gap-2"
-                      href={certificate.verification_link}
-                      rel="noreferrer"
-                      target="_blank"
-                    >
-                      <ExternalLink size={16} />
-                      Verify
-                    </a>
+                    </button>
+                    {certificate.verification_link ? (
+                      <button
+                        className="neo-button flex items-center justify-center gap-2"
+                        onClick={() => openExternalUrl(certificate.verification_link)}
+                        type="button"
+                      >
+                        <ExternalLink size={16} />
+                        Verify
+                      </button>
+                    ) : null}
                   </div>
 
                   {isAdmin ? (

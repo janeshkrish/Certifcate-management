@@ -21,7 +21,7 @@ def build_certificate_hash_payload(
     domain_name: str,
     issuer: str,
     issue_date: date,
-    verification_link: str,
+    verification_link: str | None,
     description: str,
     visibility: str,
     certificate_number: str,
@@ -65,4 +65,3 @@ def parse_object_id(value: str, field_name: str) -> ObjectId:
     if not ObjectId.is_valid(value):
         raise ValueError(f"Invalid {field_name}.")
     return ObjectId(value)
-

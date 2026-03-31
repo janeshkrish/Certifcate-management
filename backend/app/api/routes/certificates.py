@@ -121,13 +121,14 @@ async def create_certificate(
     domain_id: str = Form(...),
     issuer: str = Form(...),
     issue_date: date = Form(...),
-    verification_link: str = Form(...),
+    verification_link: str | None = Form(default=None),
     description: str = Form(...),
     visibility: str = Form("public"),
     file: UploadFile = File(...),
     _admin=Depends(get_current_admin),
 ) -> CertificateResponse:
     _validate_upload(file, required=True)
+    verification_link_value = verification_link.strip() if verification_link else None
 
     try:
         payload = CertificateCreatePayload.model_validate(
@@ -136,7 +137,7 @@ async def create_certificate(
                 "domain_id": domain_id,
                 "issuer": issuer,
                 "issue_date": issue_date,
-                "verification_link": verification_link,
+                "verification_link": verification_link_value,
                 "description": description,
                 "visibility": visibility,
             }
@@ -147,12 +148,16 @@ async def create_certificate(
     domain_record = await _fetch_domain(payload.domain_id)
     storage_result = await upload_file(file)
     certificate_number = await generate_unique_certificate_number()
+    verification_target = (
+        str(payload.verification_link) if payload.verification_link is not None else None
+    )
+    qr_target = verification_target or storage_result["file_url"]
     hash_payload = build_certificate_hash_payload(
         title=payload.title,
         domain_name=domain_record["name"],
         issuer=payload.issuer,
         issue_date=payload.issue_date,
-        verification_link=str(payload.verification_link),
+        verification_link=verification_target,
         description=payload.description,
         visibility=payload.visibility.value,
         certificate_number=certificate_number,
@@ -168,11 +173,11 @@ async def create_certificate(
         "file_url": storage_result["file_url"],
         "file_public_id": storage_result["file_public_id"],
         "file_resource_type": storage_result["file_resource_type"],
-        "verification_link": str(payload.verification_link),
+        "verification_link": verification_target,
         "description": payload.description,
         "visibility": payload.visibility.value,
         "data_hash": compute_sha256(hash_payload),
-        "qr_code_data_url": generate_qr_code_data_url(str(payload.verification_link)),
+        "qr_code_data_url": generate_qr_code_data_url(qr_target),
         "created_at": now,
         "updated_at": now,
     }
@@ -212,6 +217,7 @@ async def update_certificate(
 ) -> CertificateResponse:
     _validate_upload(file)
     certificate = await _get_certificate_or_404(certificate_id)
+    verification_link_value = verification_link.strip() if verification_link is not None else None
 
     try:
         payload = CertificateUpdatePayload.model_validate(
@@ -220,7 +226,7 @@ async def update_certificate(
                 "domain_id": domain_id,
                 "issuer": issuer,
                 "issue_date": issue_date,
-                "verification_link": verification_link,
+                "verification_link": verification_link_value,
                 "description": description,
                 "visibility": visibility,
             }
@@ -242,8 +248,10 @@ async def update_certificate(
         updated_fields["issuer"] = payload.issuer
     if payload.issue_date is not None:
         updated_fields["issue_date"] = normalize_issue_date(payload.issue_date)
-    if payload.verification_link is not None:
-        updated_fields["verification_link"] = str(payload.verification_link)
+    if verification_link is not None:
+        updated_fields["verification_link"] = (
+            str(payload.verification_link) if payload.verification_link is not None else None
+        )
     if payload.description is not None:
         updated_fields["description"] = payload.description
     if payload.visibility is not None:
@@ -260,7 +268,8 @@ async def update_certificate(
     if isinstance(issue_date_value, datetime):
         issue_date_value = issue_date_value.date()
 
-    verification_link_value = str(merged["verification_link"])
+    verification_link_value = merged.get("verification_link")
+    qr_target = verification_link_value or str(merged["file_url"])
     hash_payload = build_certificate_hash_payload(
         title=merged["title"],
         domain_name=active_domain["name"],
@@ -272,7 +281,7 @@ async def update_certificate(
         certificate_number=merged["certificate_number"],
     )
     updated_fields["data_hash"] = compute_sha256(hash_payload)
-    updated_fields["qr_code_data_url"] = generate_qr_code_data_url(verification_link_value)
+    updated_fields["qr_code_data_url"] = generate_qr_code_data_url(qr_target)
 
     database = get_database()
     await database.certificates.update_one(
@@ -310,4 +319,3 @@ async def delete_certificate(
     database = get_database()
     await database.certificates.delete_one({"_id": certificate["_id"]})
     await delete_file(certificate.get("file_public_id"), certificate.get("file_resource_type"))
-

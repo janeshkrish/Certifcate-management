@@ -24,6 +24,8 @@ def _upload_bytes(content: bytes, filename: str, folder: str) -> dict:
         folder=folder,
         public_id=f"{filename.rsplit('.', 1)[0]}-{uuid4().hex}",
         resource_type="auto",
+        type="upload",
+        access_mode="public",
         use_filename=True,
         unique_filename=False,
         overwrite=True,
@@ -66,4 +68,3 @@ async def delete_file(public_id: str | None, resource_type: str | None) -> None:
     if not public_id or not resource_type or not settings.cloudinary_enabled:
         return
     await to_thread.run_sync(_destroy_file, public_id, resource_type)
-
