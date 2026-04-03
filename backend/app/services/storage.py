@@ -149,7 +149,12 @@ def build_public_delivery_url(
     encoded_public_id = quote(public_id, safe="/")
     version_value = str(version).strip() if version is not None else ""
     version_segment = f"v{version_value}/" if version_value else ""
-    extension_segment = f".{file_format}" if file_format else ""
+    extension_segment = ""
+    if file_format:
+        normalized_public_id = str(public_id).strip().lower()
+        normalized_file_format = str(file_format).strip().lower().lstrip(".")
+        if not normalized_public_id.endswith(f".{normalized_file_format}"):
+            extension_segment = f".{normalized_file_format}"
 
     return (
         f"https://res.cloudinary.com/{settings.cloudinary_cloud_name}/"
